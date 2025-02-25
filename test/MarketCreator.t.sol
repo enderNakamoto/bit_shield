@@ -6,13 +6,14 @@ import "../src/MarketCreator.sol";
 import "../src/vaults/RiskVault.sol";
 import "../src/vaults/HedgeVault.sol";
 import "./mocks/MockToken.sol";
+import "./mocks/MockController.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 
 contract MarketCreatorTest is Test {
     MarketCreator public marketCreator;
     MockToken public asset;
-    address public controller;
+    MockController public controller;
     address public user1;
 
     event MarketVaultsCreated(
@@ -22,17 +23,19 @@ contract MarketCreatorTest is Test {
     );
 
     function setUp() public {
-        controller = address(1);
         user1 = address(2);
         asset = new MockToken();
-        vm.label(controller, "Controller");
+        
+        // Deploy the mock controller
+        controller = new MockController();
+        vm.label(address(controller), "Controller");
         vm.label(user1, "User1");
         
-        marketCreator = new MarketCreator(controller, address(asset));
+        marketCreator = new MarketCreator(address(controller), address(asset));
     }
 
     function testConstructor() public view {
-        assertEq(marketCreator.controller(), controller, "Controller address mismatch");
+        assertEq(marketCreator.controller(), address(controller), "Controller address mismatch");
         assertEq(address(marketCreator.asset()), address(asset), "Asset address mismatch");
     }
 
@@ -41,7 +44,7 @@ contract MarketCreatorTest is Test {
         new MarketCreator(address(0), address(asset));
 
         vm.expectRevert("Invalid asset address");
-        new MarketCreator(controller, address(0));
+        new MarketCreator(address(controller), address(0));
     }
 
     function testCreateMarketVaults() public {        

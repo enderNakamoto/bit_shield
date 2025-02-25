@@ -71,4 +71,68 @@ contract ControllerTest is Test {
         vm.expectRevert(abi.encodeWithSelector(MarketCreator.VaultsNotFound.selector));
         controller.matureMarket(999);
     }
+
+    // Add tests for market state transitions
+    function testMarketStateTransitions() public {
+        // Create a market
+        (uint256 marketId, , ) = marketCreator.createMarketVaults();
+        
+        // Default state should be Open
+        Controller.MarketState state = controller.marketStates(marketId);
+        assertEq(uint(state), uint(Controller.MarketState.Open), "Initial state should be Open");
+        
+        // Test deposits and withdrawals are allowed in Open state
+        assertTrue(controller.isDepositAllowed(marketId), "Deposit should be allowed in Open state");
+        assertTrue(controller.isWithdrawAllowed(marketId), "Withdraw should be allowed in Open state");
+        
+        // Start the market
+        controller.startMarket(marketId);
+        state = controller.marketStates(marketId);
+        assertEq(uint(state), uint(Controller.MarketState.InProgress), "State should be InProgress after starting");
+        
+        // Test deposits and withdrawals are not allowed in InProgress state
+        assertFalse(controller.isDepositAllowed(marketId), "Deposit should not be allowed in InProgress state");
+        assertFalse(controller.isWithdrawAllowed(marketId), "Withdraw should not be allowed in InProgress state");
+        
+        // Mature the market
+        controller.matureMarket(marketId);
+        state = controller.marketStates(marketId);
+        assertEq(uint(state), uint(Controller.MarketState.Matured), "State should be Matured after maturing");
+        
+        // Test deposits and withdrawals are allowed in Matured state
+        assertTrue(controller.isDepositAllowed(marketId), "Deposit should be allowed in Matured state");
+        assertTrue(controller.isWithdrawAllowed(marketId), "Withdraw should be allowed in Matured state");
+        
+        // Create a second market to test liquidation
+        (uint256 marketId2, , ) = marketCreator.createMarketVaults();
+        
+        // Start the market (must be in InProgress first)
+        controller.startMarket(marketId2);
+        
+        // Liquidate the market
+        controller.liquidateMarket(marketId2);
+        Controller.MarketState marketState2 = controller.marketStates(marketId2);
+        assertEq(uint(marketState2), uint(Controller.MarketState.Liquidated), "State should be Liquidated after liquidating");
+        
+        // Test deposits and withdrawals are allowed in Liquidated state
+        assertTrue(controller.isDepositAllowed(marketId2), "Deposit should be allowed in Liquidated state");
+        assertTrue(controller.isWithdrawAllowed(marketId2), "Withdraw should be allowed in Liquidated state");
+    }
+    
+    function testInvalidStateTransition() public {
+        // Create a market
+        (uint256 marketId, , ) = marketCreator.createMarketVaults();
+        
+        // Start the market (Open -> InProgress)
+        controller.startMarket(marketId);
+        
+        // Trying to start again should revert
+        vm.expectRevert(abi.encodeWithSelector(
+            Controller.InvalidStateTransition.selector,
+            marketId,
+            Controller.MarketState.InProgress,
+            Controller.MarketState.InProgress
+        ));
+        controller.startMarket(marketId);
+    }
 } 

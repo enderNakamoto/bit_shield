@@ -7,7 +7,7 @@ import "../src/Controller.sol";
 import "../test/mocks/MockToken.sol"; // Only for testing, use real asset on production
 
 contract DeployScript is Script {
-    function run() external {
+    function run() virtual external {
         // Get private key from environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address assetToken = vm.envAddress("ASSET_TOKEN_ADDRESS");

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "../Controller.sol";
 
 contract HedgeVault is ERC4626 {
     address public immutable controller;
@@ -40,8 +41,34 @@ contract HedgeVault is ERC4626 {
         sisterVault = riskVault_;
     }
     
-    function transferAssets(address to, uint256 amount) external onlyController{
+    function transferAssets(address to, uint256 amount) external onlyController {
         require(to == sisterVault, "Can only transfer to sister vault");
         IERC20(asset()).transfer(to, amount);
+    }
+    
+    // Override deposit functions to check if deposit is allowed
+    function deposit(uint256 assets, address receiver) public override returns (uint256) {
+        // Check with controller if deposit is allowed
+        Controller(controller).checkDepositAllowed(marketId);
+        return super.deposit(assets, receiver);
+    }
+    
+    function mint(uint256 shares, address receiver) public override returns (uint256) {
+        // Check with controller if deposit is allowed
+        Controller(controller).checkDepositAllowed(marketId);
+        return super.mint(shares, receiver);
+    }
+    
+    // Override withdraw functions to check if withdraw is allowed
+    function withdraw(uint256 assets, address receiver, address ownerAddress) public override returns (uint256) {
+        // Check with controller if withdraw is allowed
+        Controller(controller).checkWithdrawAllowed(marketId);
+        return super.withdraw(assets, receiver, ownerAddress);
+    }
+    
+    function redeem(uint256 shares, address receiver, address ownerAddress) public override returns (uint256) {
+        // Check with controller if withdraw is allowed
+        Controller(controller).checkWithdrawAllowed(marketId);
+        return super.redeem(shares, receiver, ownerAddress);
     }
 }

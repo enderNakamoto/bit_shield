@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./vaults/RiskVault.sol";
 import "./vaults/HedgeVault.sol";
+import "./Controller.sol";
 
 contract MarketCreator {
     address public immutable controller;
@@ -77,6 +78,15 @@ contract MarketCreator {
             riskVault: riskVault,
             hedgeVault: hedgeVault
         });
+        
+        // Notify the controller about the new market
+        try Controller(controller).marketCreated(marketId) {
+            // Successfully notified the controller
+        } catch {
+            // The controller might not have the marketCreated function yet
+            // or there might be an issue with the call, but we don't want to
+            // revert the market creation process
+        }
         
         emit MarketVaultsCreated(marketId, riskVault, hedgeVault);
         

@@ -75,6 +75,32 @@ export MARKET_CREATOR_ADDRESS=0x...
 forge script script/CreateMarket.s.sol:CreateMarketScript --rpc-url $RPC_URL --broadcast
 ```
 
+### 5. Managing Market States
+
+Markets in the Risk Hedge Protocol have four possible states:
+
+1. **Open**: Initial state after market creation. Deposits and withdrawals are allowed.
+2. **InProgress**: The market is active. No deposits or withdrawals are allowed.
+3. **Matured**: The market has matured successfully. Deposits and withdrawals are allowed.
+4. **Liquidated**: The market has been liquidated. Deposits and withdrawals are allowed.
+
+To manage market states:
+
+```bash
+# Set required environment variables
+export CONTROLLER_ADDRESS=0x...
+export MARKET_ID=1
+export ACTION=start  # Options: start, mature, liquidate
+
+# Run the manage market script
+forge script script/ManageMarket.s.sol:ManageMarketScript --rpc-url $RPC_URL --broadcast
+```
+
+The actions correspond to different state transitions:
+- `start`: Sets the market state from Open to InProgress
+- `mature`: Matures the market and transfers assets from Hedge vault to Risk vault
+- `liquidate`: Liquidates the market and transfers assets from Risk vault to Hedge vault
+
 ## Important Notes
 
 1. **Controller Address Issue**: Due to the architecture of the protocol, the MarketCreator contract is initialized with a controller address, and the Controller contract is initialized with the MarketCreator address. This creates a circular dependency. Our deployment script handles this by:
@@ -87,7 +113,14 @@ forge script script/CreateMarket.s.sol:CreateMarketScript --rpc-url $RPC_URL --b
    - Transfer ownership of any contracts if required
    - Perform thorough testing before actual usage
 
-3. **Security**: Always be extremely careful with private keys, especially for mainnet deployments.
+3. **Market State Flow**:
+   - New Markets start in the **Open** state
+   - When ready, transition to **InProgress** using the `startMarket` function
+   - Markets can then be **Matured** or **Liquidated** based on outcome
+   - In **Matured** state, Risk vault investors get returns
+   - In **Liquidated** state, Hedge vault investors get returns
+
+4. **Security**: Always be extremely careful with private keys, especially for mainnet deployments.
 
 ## Troubleshooting
 
