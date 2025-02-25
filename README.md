@@ -2,9 +2,11 @@
 
 # Bit Shield
 
+## For Rootstack and BOB
 * UI - bitshield-btc.vercel.app/
 * UI repo - https://github.com/enderNakamoto/bit_shield_ui
 
+## For Bob Only
 * Bob Gateway Strategy Contracts 
 * https://github.com/enderNakamoto/bit_shield_bob_strategy
 
