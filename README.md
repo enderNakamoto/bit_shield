@@ -2,86 +2,30 @@
 
 # Bit Shield
 
-## For Rootstack and BOB
-* UI - bitshield-btc.vercel.app/
-* UI repo - https://github.com/enderNakamoto/bit_shield_ui
+## What Did we Build and Why?
 
-## For Bob Only
-* Bob Gateway Strategy Contracts 
-* https://github.com/enderNakamoto/bit_shield_bob_strategy
+We set out to create something engaging for BTC holders—an opportunity to have fun while earning real yield. Our goal was to tackle a real-world problem while enabling Bitcoiners to generate tangible returns.
 
-## RootSock Deployed Contracts
-Note: Production will use a wrapped or LST BTC token, but we could not find one in testnet to test with, 
-so we tested with rif as a placeholder. 
+In just a 20-hour sprint, a solo dev and his Claude 3.7 sidekick made decent progress. Here’s what they’ve accomplished so far: 
 
-* Asset(Rif):  0x19F64674D8A5B4E652319F5e239eFd3bc969A1fE 
-* Controller: 0xff12B5be6177b71e33049666bD76304C1C1398F3
-* MarcketCreator: 0x13F5778A89A5030349cbE6E43Cd234C6AA7B5d12
+We set out to fetch Turkish Lira data and offer people a way to hedge against their inflationary fiat using Bitcoin—a worthy goal. Stacking sats > holding fiat.
 
-### Market 1
-* start 1740497700
-* end  1742916600 (1 month for now)
-* StrikePrice:1000
-* liquidity
-   * 0: address: riskVault 0x619E43Fd4C73E42dEE600AA8027320d6F4ed7C98
-   * 1: address: hedgeVault 0x221A980d0f229D36b04b411A0517CE61b42A22Fc
+## How did we do it? - Risk/Protocol
 
-### Market 1
-* start 1740497700
-* end  1740498900 (Expired)
-* StrikePrice:1000
-* liquidity
-   * 0: address: riskVault 0xB2606A4a8cb7cc9d5B6664e655629F9CC01dA4aC
-   * 1: address: hedgeVault 0x2DB45f3c678E92555951545E2AcFf7dF052107f9   
+We built a protocol on top of ERC4626 primitive
 
+![alt text](image.png)
 
-## Architecture Overview
-The architecture of this project is designed to facilitate the creation and management of risk markets, where users can Underwrite (Invest in Insurance/Provide Liquidity) or Hedge against various types of risks using BTC.
+![alt text](images/vault.png)
 
-The system consists of four main components:
+The protocol consists of four main contracts:
 
 * **Controller**: This is the main entry point for all frontend interactions. It orchestrates the entire system, processing oracle data, managing market states, and facilitating market creation.
 * **MarketCreator**: This contract is responsible for creating and managing risk and hedge vaults for each market. It is primarily called by the Controller.
 * **RiskVault**: This contract represents the "risk" side of a market, where users can deposit funds to take on risk.
 * **HedgeVault**: This contract represents the "hedge" side of a market, where users can deposit funds to hedge against the risks.
 
-#### Controller
-
-The `Controller` contract serves as the primary interface for interacting with the protocol:
-
-1. **Market Management**: Handles starting, maturing, and liquidating markets based on market conditions and oracle data.
-
-2. **State Control**: Manages the state transitions of markets (Open → InProgress → Matured/Liquidated).
-
-3. **Market Creation**: Provides proxy functions to create new markets through the `MarketCreator`.
-
-#### MarketCreator
-
-The `MarketCreator` contract creates and manages market vaults:
-
-1. **Market Creation**: The `createMarketVaults()` function allows the creation of a new risk and hedge vault pair for a given market.
-
-2. **Market Lookup**: The `getVaults()` function allows retrieving the addresses of the risk and hedge vault addresses for a given market.
-
-The `MarketCreator` contract maintains a mapping of market IDs to the corresponding risk and hedge vault addresses.
-
-#### RiskVault and HedgeVault
-
-The `RiskVault` and `HedgeVault` contracts represent the "risk" and "hedge" sides of a market, respectively. They share a similar structure and functionality:
-
-1. **Deposit and Withdrawal**: Users can deposit funds into the vaults and withdraw their shares later.
-
-2. **Asset Transfer**: The vaults can only transfer assets to their "sister" vault, as controlled by the Controller.
-
-3. **Ownership**: The HedgeVault contract has an owner, which is the MarketCreator contract.
-
-The vaults inherit from the **ERC4626** standard, which provides a standard interface for tokenized vaults.
-
-The tests provided in the project demonstrate the expected usage and behavior of the system.
-
-![alt text](image.png)
-
-![alt text](images/vault.png)
+and the controller basically controls the state of the protocol, that is the essence of how it all works - 
 
 ## Explanation of Each State
 
@@ -103,29 +47,6 @@ The tests provided in the project demonstrate the expected usage and behavior of
 - Occurs if the event **finishes without hitting the trigger price**.
 - No payout is made from the risk vault to the hedge vault.
 - **Deposits and withdrawals are re-enabled** for final settlement.
-
-## State Transitions
-
-### Open → InProgress
-- **Triggered when the event start time is reached**.
-- **Locks deposits and withdrawals** so no new capital can enter or leave during the critical period.
-
-### InProgress → Liquidated
-- If the underlying price **crosses the trigger condition**, the market transitions to Liquidated.
-- **Hedge participants receive payouts**.
-
-### InProgress → Matured
-- If the event ends **without hitting the trigger condition**, the market transitions to Matured.
-- **No liquidation payout is necessary**.
-
-### Liquidated or Matured → Settlement
-- **Deposits and withdrawals are unlocked**.
-- Users can **retrieve their final balances**.
-
-## Role of the Controller Contract
-The **Controller contract** enforces these transitions, ensuring:
-- No **unauthorized changes** occur.
-- Market integrity is **maintained throughout its lifecycle**.
 
 ![alt text](image-1.png)
 
@@ -194,85 +115,115 @@ $ forge build
 ```shell
 $ forge test
 ```
+![alt text](image-2.png)
 
-### Format
+## Deployment
 
-```shell
-$ forge fmt
+### RootSock Deployed Contracts
+Note: Production will use a wrapped or LST BTC token, but we could not find one in testnet to test with, 
+so we tested with rif as a placeholder. 
+
+* Asset(Rif):  0x19F64674D8A5B4E652319F5e239eFd3bc969A1fE 
+
+* Controller: https://explorer.testnet.rootstock.io/address/0x741146144f6272013557c4facfb2b583f9a1f30c
+
+* MArket Creator: https://explorer.testnet.rootstock.io/address/0x4a14fb4c5ca93f6638680eb010b8e565a93d6c74 
+
+* Hedge Vault (Liquidated) https://explorer.testnet.rootstock.io/address/0xfee5d66934ccedc4b4602ee872b899c5c64c4ec7
+
+* Risk liq vault(Liquidated) https://explorer.testnet.rootstock.io/address/0xa5ab77d3e481ab0c7f9fcfe3b3d9c04dcabff057
+
+* Hedge Vault (Matured) https://explorer.testnet.rootstock.io/address/0x31fb5005b852cfd91a9dead82fa34873e89a572b 
+
+* Risk Vault (Matured) https://explorer.testnet.rootstock.io/address/0x0d328a8994decca266508ea3106b2d68cb9111fc   
+
+###  Bob Deployed Contracts 
+Mote, we used USDC as a standin ERC-20 token, but think of it as sBTC, any BTC but uniBTC 
+
+* Controller: https://bob-sepolia.explorer.gobob.xyz/address/0xA6A0f612A764B23CdEffac61Fe677380Ac7f5f32?tab=contract
+
+* Market Creator https://bob-sepolia.explorer.gobob.xyz/address/0x55ED163F184b162F708E9d79C303D65a573508AE?tab=contract
+
+* Hedge Vault (Liquidated): https://bob-sepolia.explorer.gobob.xyz/address/0xbe6bB2230F9Eb6C94861Aad91d661FAd14D26452?tab=contract
+
+* Risk liq vault(Liquidated): https://bob-sepolia.explorer.gobob.xyz/address/0xcf09463De1e4B06719F48cA9E7Bd623919E4A1cC?tab=contract
+
+* Hedge Vault (Matured):  https://bob-sepolia.explorer.gobob.xyz/address/0x4919da093614EC2F829715454cBC355B212CFB30?tab=contract
+
+* Risk Vault (Matured):  https://bob-sepolia.explorer.gobob.xyz/address/0x52f41Fb065d6CFBd68c6BA2f06b2BFd0b711a27e?tab=contract
+
+## Other Bob Things: 
+
+* Bob Gateway Strategy Contracts 
+* https://github.com/enderNakamoto/bit_shield_bob_strategy
+
+This is no where done, but it shows how you can gateway to put BTC directly into our strategy 
+
+## FrontEnd 
+### For Rootstack and BOB
+* UI - bitshield-btc.vercel.app/
+* UI repo - https://github.com/enderNakamoto/bit_shield_ui
+
+## Oracle - How are you getting real world data: 
+
+Acurast TEE - runs any nodejs script in a cluster 
+
+* works with Bob out of the box, with ootstock you have to wrangle it a bit 
+
+
 ```
+const destination = "0x41bE4666a074BBc1283fC09385D91b32B103A865";
+const XE_ACCOUNT_ID = "YOUR_XE_ACCOUNT_ID";
+const XE_API_KEY = "YOUR_XE_API_KEY";
+const FROM_CURRENCY = "TRY";
+const TO_CURRENCY = "USD";
+const AMOUNT = 1000;
 
-### Gas Snapshots
+// Create authorization header for XE API
+const authHeader = 'Basic ' + Buffer.from(`${XE_ACCOUNT_ID}:${XE_API_KEY}`).toString('base64');
 
-```shell
-$ forge snapshot
+httpGET(
+    `https://xecdapi.xe.com/v1/convert_to?from=${FROM_CURRENCY}&to=${TO_CURRENCY}&amount=${AMOUNT}`,
+    {
+        "accept": "application/json",
+        "Authorization": authHeader
+    },
+    (response, _certificate) => {
+        // Parse the XE API response
+        const responseData = JSON.parse(response);
+        // Extract the mid value
+        const midValue = responseData.from[0].mid;
+        // Scale the price for blockchain (multiply by 10^18)
+        const price = midValue * 10 ** 18;
+        const bytes = "0x" + price.toString(16).padStart(64, '0');
+        const payload = "0x" + *STD*.chains.ethereum.abi.encode(bytes);
+        
+        *STD*.chains.ethereum.fulfill(
+            "https://testnet.rpc.gobob.xyz",
+            destination,
+            payload,
+            {
+                methodSignature: "fulfill(bytes)",
+                gasLimit: "9000000",
+                maxFeePerGas: "2550000000",
+                maxPriorityFeePerGas: "2550000000",
+            },
+            (opHash) => {
+                console.log("Succeeded: " + opHash)
+            },
+            (err) => {
+                console.log("Failed: " + err)
+            },
+        )
+    },
+    (err) => {
+        console.log("Failed: " + err)
+    }
+);
 ```
+## For RootStock: (Ran out of time):
 
-### Anvil
+* https://github.com/enderNakamoto/bit_shield_oracle
 
-```shell
-$ anvil
-```
+![alt text](image-3.png)
 
-### Deployment
-
-The project includes several deployment scripts for different environments:
-
-#### Testnet Deployment
-
-```shell
-$ forge script script/DeployTestnet.s.sol:DeployTestnetScript --rpc-url <testnet_rpc_url> --private-key <your_private_key> --broadcast
-```
-
-#### Mainnet Deployment
-
-```shell
-$ forge script script/DeployMainnet.s.sol:DeployMainnetScript --rpc-url <mainnet_rpc_url> --private-key <your_private_key> --broadcast
-```
-
-**Important**: After deployment, note the addresses of the deployed contracts, especially the Controller address which will be used for all frontend interactions.
-
-#### Market Management
-
-Once deployed, you can create and manage markets using the ManageMarket script:
-
-1. **Create a Market**:
-```shell
-$ forge script script/ManageMarket.s.sol:ManageMarketScript --rpc-url <rpc_url> --private-key <private_key> --broadcast --env-file .env -vvv
-```
-Set the following environment variables in `.env`:
-```
-ACTION=create
-CONTROLLER=<controller_address>
-EVENT_START_TIME=<unix_timestamp>
-EVENT_END_TIME=<unix_timestamp>
-TRIGGER_PRICE=<price_in_wei>
-```
-
-2. **Start a Market**:
-```
-ACTION=start
-CONTROLLER=<controller_address>
-MARKET_ID=<market_id>
-```
-
-3. **Liquidate a Market** (for testing):
-```
-ACTION=liquidate
-CONTROLLER=<controller_address>
-MARKET_ID=<market_id>
-```
-
-4. **Mature a Market**:
-```
-ACTION=mature
-CONTROLLER=<controller_address>
-MARKET_ID=<market_id>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
