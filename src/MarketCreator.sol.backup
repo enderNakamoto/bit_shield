@@ -39,7 +39,7 @@ contract MarketCreator {
         asset = IERC20(asset_);
         nextMarketId = 1;
     }
-    
+
     function createMarketVaults() 
         external 
         returns (
@@ -95,4 +95,4 @@ contract MarketCreator {
         if (vaults.riskVault == address(0)) revert VaultsNotFound();
         return (vaults.riskVault, vaults.hedgeVault);
     }
-} 
+}

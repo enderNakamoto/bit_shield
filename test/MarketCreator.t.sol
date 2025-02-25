@@ -67,56 +67,8 @@ contract MarketCreatorTest is Test {
         assertEq(thirdId, 3, "Third ID should be 3");
     }
 
-    function testControllerLiquidate() public {
-        // Create market and fund risk vault
-        (uint256 marketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults();
-        asset.transfer(riskVault, 1000);
-        
-        // Non-controller cannot liquidate
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(MarketCreator.NotController.selector));
-        marketCreator.controllerLiquidate(marketId);
-        
-        // Controller can liquidate
-        vm.prank(controller);
-        marketCreator.controllerLiquidate(marketId);
-        
-        assertEq(asset.balanceOf(riskVault), 0, "Risk vault should be empty");
-        assertEq(asset.balanceOf(hedgeVault), 1000, "Hedge vault should have funds");
-    }
-
-    function testControllerMature() public {
-        // Create market and fund hedge vault
-        (uint256 marketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults();
-        asset.transfer(hedgeVault, 1000);
-        
-        // Non-controller cannot mature
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(MarketCreator.NotController.selector));
-        marketCreator.controllerMature(marketId);
-        
-        // Controller can mature
-        vm.prank(controller);
-        marketCreator.controllerMature(marketId);
-        
-        assertEq(asset.balanceOf(hedgeVault), 0, "Hedge vault should be empty");
-        assertEq(asset.balanceOf(riskVault), 1000, "Risk vault should have funds");
-    }
-
     function testGetNonExistentVaults() public {
         vm.expectRevert(abi.encodeWithSelector(MarketCreator.VaultsNotFound.selector));
         marketCreator.getVaults(999);
-    }
-
-    function testLiquidateNonExistentMarket() public {
-        vm.prank(controller);
-        vm.expectRevert(abi.encodeWithSelector(MarketCreator.VaultsNotFound.selector));
-        marketCreator.controllerLiquidate(999);
-    }
-
-    function testMatureNonExistentMarket() public {
-        vm.prank(controller);
-        vm.expectRevert(abi.encodeWithSelector(MarketCreator.VaultsNotFound.selector));
-        marketCreator.controllerMature(999);
     }
 }

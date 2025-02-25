@@ -40,7 +40,7 @@ contract HedgeVault is ERC4626 {
         sisterVault = riskVault_;
     }
     
-    function transferAssets(address to, uint256 amount) external {
+    function transferAssets(address to, uint256 amount) external onlyController{
         require(to == sisterVault, "Can only transfer to sister vault");
         IERC20(asset()).transfer(to, amount);
     }
