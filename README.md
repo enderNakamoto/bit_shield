@@ -6,6 +6,31 @@
 * UI - bitshield-btc.vercel.app/
 * UI repo - https://github.com/enderNakamoto/bit_shield_ui
 
+## RootSock Deployed Contracts
+Note: Production will use a wrapped or LST BTC token, but we could not find one in testnet to test with, 
+so we tested with rif as a placeholder. 
+
+* Asset(Rif):  0x19F64674D8A5B4E652319F5e239eFd3bc969A1fE 
+* Controller: 0xff12B5be6177b71e33049666bD76304C1C1398F3
+* MarcketCreator: 0x13F5778A89A5030349cbE6E43Cd234C6AA7B5d12
+
+### Market 1
+* start 1740497700
+* end  1742916600 (1 month for now)
+* StrikePrice:1000
+* liquidity
+   * 0: address: riskVault 0x619E43Fd4C73E42dEE600AA8027320d6F4ed7C98
+   * 1: address: hedgeVault 0x221A980d0f229D36b04b411A0517CE61b42A22Fc
+
+### Market 1
+* start 1740497700
+* end  1740498900 (Expired)
+* StrikePrice:1000
+* liquidity
+   * 0: address: riskVault 0xB2606A4a8cb7cc9d5B6664e655629F9CC01dA4aC
+   * 1: address: hedgeVault 0x2DB45f3c678E92555951545E2AcFf7dF052107f9   
+
+
 ## For Bob Only
 * Bob Gateway Strategy Contracts 
 * https://github.com/enderNakamoto/bit_shield_bob_strategy
