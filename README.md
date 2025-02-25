@@ -6,6 +6,10 @@
 * UI - bitshield-btc.vercel.app/
 * UI repo - https://github.com/enderNakamoto/bit_shield_ui
 
+## For Bob Only
+* Bob Gateway Strategy Contracts 
+* https://github.com/enderNakamoto/bit_shield_bob_strategy
+
 ## RootSock Deployed Contracts
 Note: Production will use a wrapped or LST BTC token, but we could not find one in testnet to test with, 
 so we tested with rif as a placeholder. 
@@ -30,10 +34,6 @@ so we tested with rif as a placeholder.
    * 0: address: riskVault 0xB2606A4a8cb7cc9d5B6664e655629F9CC01dA4aC
    * 1: address: hedgeVault 0x2DB45f3c678E92555951545E2AcFf7dF052107f9   
 
-
-## For Bob Only
-* Bob Gateway Strategy Contracts 
-* https://github.com/enderNakamoto/bit_shield_bob_strategy
 
 ## Architecture Overview
 The architecture of this project is designed to facilitate the creation and management of risk markets, where users can Underwrite (Invest in Insurance/Provide Liquidity) or Hedge against various types of risks using BTC.
