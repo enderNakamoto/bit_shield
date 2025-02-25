@@ -172,15 +172,4 @@ contract MarketCreator {
         if (vaults.riskVault == address(0)) revert VaultsNotFound();
         return (vaults.riskVault, vaults.hedgeVault);
     }
-    
-    // For testing purposes - register existing vaults
-    function registerVaults(uint256 marketId, address riskVault, address hedgeVault) external {
-        // This should only be callable by the test contract
-        require(msg.sender == controller, "Only controller can register vaults");
-        
-        marketVaults[marketId] = MarketVaults({
-            riskVault: riskVault,
-            hedgeVault: hedgeVault
-        });
-    }
 } 

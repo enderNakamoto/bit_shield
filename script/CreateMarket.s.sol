@@ -9,18 +9,18 @@ contract CreateMarketScript is Script {
     function run() external {
         // Get private key and addresses from environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address marketCreatorAddress = vm.envAddress("MARKET_CREATOR_ADDRESS");
+        address controllerAddress = vm.envAddress("CONTROLLER_ADDRESS");
         
-        require(marketCreatorAddress != address(0), "Market Creator address must be provided");
+        require(controllerAddress != address(0), "Controller address must be provided");
         
         // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
         
-        // Get the market creator contract
-        MarketCreator marketCreator = MarketCreator(marketCreatorAddress);
+        // Get the controller contract
+        Controller controller = Controller(controllerAddress);
         
-        // Create a new market
-        (uint256 marketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults();
+        // Create a new market through the controller
+        (uint256 marketId, address riskVault, address hedgeVault) = controller.createMarket();
         
         // Stop broadcasting
         vm.stopBroadcast();

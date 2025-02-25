@@ -15,7 +15,6 @@ contract ManageMarketScript is Script {
 
     function run() external {
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        address marketCreatorAddr = vm.envAddress("MARKET_CREATOR");
         address controllerAddr = vm.envAddress("CONTROLLER");
         
         // Market creation parameters
@@ -56,15 +55,15 @@ contract ManageMarketScript is Script {
         
         if (action == Action.CREATE) {
             // Create a new market with specified timing parameters
-            require(marketCreatorAddr != address(0), "Market creator address is required");
-            MarketCreator marketCreator = MarketCreator(marketCreatorAddr);
+            require(controllerAddr != address(0), "Controller address is required");
+            Controller controller = Controller(controllerAddr);
             
             console.log("Creating a new market with:");
             console.log("- Event Start Time:", eventStartTime);
             console.log("- Event End Time:", eventEndTime);
             console.log("- Trigger Price:", triggerPrice);
             
-            (uint256 newMarketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults(
+            (uint256 newMarketId, address riskVault, address hedgeVault) = controller.createMarket(
                 eventStartTime,
                 eventEndTime,
                 triggerPrice
@@ -76,7 +75,6 @@ contract ManageMarketScript is Script {
             console.log("- Hedge Vault:", hedgeVault);
             
             // Get and log the market state
-            Controller controller = Controller(controllerAddr);
             Controller.MarketState state = controller.marketStates(newMarketId);
             console.log("- Current State:", uint256(state));
             

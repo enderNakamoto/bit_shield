@@ -272,4 +272,33 @@ contract Controller {
     function getMarketTriggerPrice(uint256 marketId) external view returns (uint256) {
         return marketDetails[marketId].triggerPrice;
     }
+    
+    // --- Frontend entry point functions ---
+    
+    // Create a market with custom parameters through Controller
+    function createMarket(
+        uint256 eventStartTime,
+        uint256 eventEndTime,
+        uint256 triggerPrice
+    ) external returns (uint256 marketId, address riskVault, address hedgeVault) {
+        return marketCreator.createMarketVaults(eventStartTime, eventEndTime, triggerPrice);
+    }
+    
+    // Create a market with custom timing parameters and default trigger price
+    function createMarket(
+        uint256 eventStartTime,
+        uint256 eventEndTime
+    ) external returns (uint256 marketId, address riskVault, address hedgeVault) {
+        return marketCreator.createMarketVaults(eventStartTime, eventEndTime);
+    }
+    
+    // Create a market with all default parameters
+    function createMarket() external returns (uint256 marketId, address riskVault, address hedgeVault) {
+        return marketCreator.createMarketVaults();
+    }
+    
+    // Get vaults for a specific market
+    function getMarketVaults(uint256 marketId) external view returns (address riskVault, address hedgeVault) {
+        return marketCreator.getVaults(marketId);
+    }
 } 
