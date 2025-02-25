@@ -79,8 +79,55 @@ The vaults inherit from the **ERC4626** standard, which provides a standard inte
 
 The tests provided in the project demonstrate the expected usage and behavior of the system.
 
+![alt text](image.png)
 
 ![alt text](images/vault.png)
+
+## Explanation of Each State
+
+### 1. Open
+- Users can freely **deposit and withdraw** from both the risk and hedge vaults.
+- The market has **not yet reached** its event start time.
+
+### 2. InProgress
+- Triggered automatically **when the event start time is reached**.
+- **Deposits and withdrawals are locked** to prevent manipulation during the risk event.
+- The market remains in this state until **the event concludes**.
+
+### 3. Liquidated
+- Occurs if, at the end of the event, the **trigger price condition is breached**.
+- The **hedge vault is paid out** from the risk vault’s assets.
+- **Deposits and withdrawals are re-enabled**, allowing users to collect proceeds or remaining capital.
+
+### 4. Matured
+- Occurs if the event **finishes without hitting the trigger price**.
+- No payout is made from the risk vault to the hedge vault.
+- **Deposits and withdrawals are re-enabled** for final settlement.
+
+## State Transitions
+
+### Open → InProgress
+- **Triggered when the event start time is reached**.
+- **Locks deposits and withdrawals** so no new capital can enter or leave during the critical period.
+
+### InProgress → Liquidated
+- If the underlying price **crosses the trigger condition**, the market transitions to Liquidated.
+- **Hedge participants receive payouts**.
+
+### InProgress → Matured
+- If the event ends **without hitting the trigger condition**, the market transitions to Matured.
+- **No liquidation payout is necessary**.
+
+### Liquidated or Matured → Settlement
+- **Deposits and withdrawals are unlocked**.
+- Users can **retrieve their final balances**.
+
+## Role of the Controller Contract
+The **Controller contract** enforces these transitions, ensuring:
+- No **unauthorized changes** occur.
+- Market integrity is **maintained throughout its lifecycle**.
+
+![alt text](image-1.png)
 
 ## Frontend Integration
 
