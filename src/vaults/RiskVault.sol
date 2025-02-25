@@ -7,8 +7,8 @@ import "../Controller.sol";
 
 contract RiskVault is ERC4626 {
     address public immutable controller;
-    address public sisterVault;
     uint256 public immutable marketId;
+    address public sisterVault;
     
     modifier onlyController() {
         require(msg.sender == controller, "Only controller can call this function");
