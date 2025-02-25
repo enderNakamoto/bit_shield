@@ -2,8 +2,8 @@
 
 # Bit Shield
 
-UI - bitshield-btc.vercel.app/
-UI repo - https://github.com/enderNakamoto/bit_shield_ui
+* UI - bitshield-btc.vercel.app/
+* UI repo - https://github.com/enderNakamoto/bit_shield_ui
 
 ## Architecture Overview
 The architecture of this project is designed to facilitate the creation and management of risk markets, where users can Underwrite (Invest in Insurance/Provide Liquidity) or Hedge against various types of risks using BTC.
