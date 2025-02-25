@@ -1,9 +1,9 @@
 ![alt text](images/cover.png)
 
-# Risk Relay
+# Bit Shield
 
 ## Architecture Overview
-The architecture of this project is designed to facilitate the creation and management of risk markets, where users can Underwrite (Invest in Insurance/Provide Liquidity) or Hedge against various types of risks.
+The architecture of this project is designed to facilitate the creation and management of risk markets, where users can Underwrite (Invest in Insurance/Provide Liquidity) or Hedge against various types of risks using BTC.
 
 The system consists of four main components:
 
