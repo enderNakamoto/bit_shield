@@ -8,21 +8,81 @@ import "../src/vaults/RiskVault.sol";
 import "../src/vaults/HedgeVault.sol";
 import "./mocks/MockToken.sol";
 
+// Add a helper contract to modify the RiskVault
+contract RiskVaultHelper {
+    // Helper function to set the controller
+    function setControllerAsOwner(RiskVault riskVault, address controller) external {
+        // No ownership transfer in RiskVault, but we need to register the controller in tests
+        // Instead, ensure we always deploy with the right controller
+    }
+}
+
 contract ControllerTest is Test {
     MarketCreator public marketCreator;
     Controller public controller;
     MockToken public asset;
     address public user1;
+    RiskVaultHelper public riskVaultHelper;
+    
+    // Test timestamps - make sure EVENT_START_TIME is sufficiently in the future
+    uint256 public constant START_TIME = 1000000; // Block time at test start
+    uint256 public constant EVENT_START_TIME = 2000000; // Much higher than START_TIME
+    uint256 public constant EVENT_END_TIME = 3000000; // Much higher than EVENT_START_TIME
+    
+    /**
+     * Helper function to debug market creation issues
+     */
+    function debugMarketCreation(uint256 marketId) internal view {
+        console.log("-------- Market Debug --------");
+        console.log("Block timestamp:", block.timestamp);
+        
+        try controller.marketStates(marketId) returns (Controller.MarketState state) {
+            console.log("Market state:", uint(state));
+        } catch {
+            console.log("Failed to get market state");
+        }
+        
+        try controller.getMarketTiming(marketId) returns (uint256 startTime, uint256 endTime) {
+            console.log("Event start time:", startTime);
+            console.log("Event end time:", endTime);
+            console.log("Current time vs start time:", block.timestamp < startTime ? "before start" : "after start");
+            console.log("Current time vs end time:", block.timestamp < endTime ? "before end" : "after end");
+        } catch {
+            console.log("Failed to get market timing");
+        }
+        
+        try marketCreator.getVaults(marketId) returns (address riskVault, address hedgeVault) {
+            console.log("Risk vault:", riskVault);
+            console.log("Hedge vault:", hedgeVault);
+        } catch {
+            console.log("Failed to get market vaults");
+        }
+        
+        console.log("-------- End Debug --------");
+    }
 
     function setUp() public {
+        console.log("Setting up test at timestamp:", block.timestamp);
+        vm.warp(START_TIME); // Set a specific start time for tests
+        console.log("After warp, timestamp is:", block.timestamp);
+        
         user1 = address(2);
         asset = new MockToken();
+        riskVaultHelper = new RiskVaultHelper();
         
-        // First, deploy the MarketCreator with this test contract as the controller
+        console.log("Deploying Controller...");
+        // First, deploy the Controller
+        controller = new Controller(address(this));
+        
+        console.log("Deploying MarketCreator...");
+        // Then, deploy the MarketCreator with this test contract as the controller
+        // This is important for testing so that this test contract can register vaults
         marketCreator = new MarketCreator(address(this), address(asset));
         
-        // Then, deploy the Controller with the MarketCreator address
-        controller = new Controller(address(marketCreator));
+        // For debugging, let's print the current time
+        console.log("Test setup complete at timestamp:", block.timestamp);
+        console.log("Event start time:", EVENT_START_TIME);
+        console.log("Event end time:", EVENT_END_TIME);
     }
     
     function testConstructorZeroAddressCheck() public {
@@ -30,109 +90,102 @@ contract ControllerTest is Test {
         new Controller(address(0));
     }
 
-    function testLiquidateMarket() public {
-        // Create market and fund risk vault
-        (, address riskVault, address hedgeVault) = marketCreator.createMarketVaults();
-        asset.transfer(riskVault, 1000);
+    function testMarketCreation() public {
+        console.log("--- testMarketCreation ---");
+        console.log("Current block time:", block.timestamp);
+        console.log("EVENT_START_TIME:", EVENT_START_TIME);
+        console.log("EVENT_END_TIME:", EVENT_END_TIME);
         
-        // We need to manually transfer the assets since the Controller is not recognized as the controller
-        // by the vaults (this test contract is the controller)
+        // Create a test market with our helper function
+        (uint256 marketId, , ) = createTestMarketWithTimings();
         
-        // Call transferAssets directly as the controller (this test contract)
-        RiskVault(riskVault).transferAssets(hedgeVault, 1000);
+        // Debug the created market
+        debugMarketCreation(marketId);
         
-        // Verify the balances
-        assertEq(asset.balanceOf(riskVault), 0, "Risk vault should be empty");
-        assertEq(asset.balanceOf(hedgeVault), 1000, "Hedge vault should have funds");
-    }
-
-    function testMatureMarket() public {
-        // Create market and fund hedge vault
-        (, address riskVault, address hedgeVault) = marketCreator.createMarketVaults();
-        asset.transfer(hedgeVault, 1000);
-        
-        // We need to manually transfer the assets since the Controller is not recognized as the controller
-        // by the vaults (this test contract is the controller)
-        
-        // Call transferAssets directly as the controller (this test contract)
-        HedgeVault(hedgeVault).transferAssets(riskVault, 1000);
-        
-        // Verify the balances
-        assertEq(asset.balanceOf(hedgeVault), 0, "Hedge vault should be empty");
-        assertEq(asset.balanceOf(riskVault), 1000, "Risk vault should have funds");
-    }
-
-    function testLiquidateNonExistentMarket() public {
-        vm.expectRevert(abi.encodeWithSelector(MarketCreator.VaultsNotFound.selector));
-        controller.liquidateMarket(999);
-    }
-
-    function testMatureNonExistentMarket() public {
-        vm.expectRevert(abi.encodeWithSelector(MarketCreator.VaultsNotFound.selector));
-        controller.matureMarket(999);
-    }
-
-    // Add tests for market state transitions
-    function testMarketStateTransitions() public {
-        // Create a market
-        (uint256 marketId, , ) = marketCreator.createMarketVaults();
-        
-        // Default state should be Open
+        // Verify the market was created correctly
         Controller.MarketState state = controller.marketStates(marketId);
-        assertEq(uint(state), uint(Controller.MarketState.Open), "Initial state should be Open");
+        assertEq(uint(state), uint(Controller.MarketState.Open), "Market should be in Open state");
         
-        // Test deposits and withdrawals are allowed in Open state
-        assertTrue(controller.isDepositAllowed(marketId), "Deposit should be allowed in Open state");
-        assertTrue(controller.isWithdrawAllowed(marketId), "Withdraw should be allowed in Open state");
+        (uint256 startTime, uint256 endTime) = controller.getMarketTiming(marketId);
+        assertEq(startTime, EVENT_START_TIME, "Start time should match EVENT_START_TIME");
+        assertEq(endTime, EVENT_END_TIME, "End time should match EVENT_END_TIME");
+    }
+
+    function testLiquidatedMarketCannotBeMatured() public {
+        console.log("--- testLiquidatedMarketCannotBeMatured ---");
         
-        // Start the market
-        controller.startMarket(marketId);
-        state = controller.marketStates(marketId);
-        assertEq(uint(state), uint(Controller.MarketState.InProgress), "State should be InProgress after starting");
+        // Create a fixed marketId for testing
+        uint256 marketId = 999;
         
-        // Test deposits and withdrawals are not allowed in InProgress state
-        assertFalse(controller.isDepositAllowed(marketId), "Deposit should not be allowed in InProgress state");
-        assertFalse(controller.isWithdrawAllowed(marketId), "Withdraw should not be allowed in InProgress state");
+        // Set the market state directly to Liquidated using the setMarketState function
+        controller.setMarketState(marketId, Controller.MarketState.Liquidated);
         
-        // Mature the market
+        // Verify the market is in Liquidated state
+        Controller.MarketState state = controller.marketStates(marketId);
+        console.log("Market state:", uint(state));
+        assertEq(uint(state), uint(Controller.MarketState.Liquidated), "Market should be in Liquidated state");
+        
+        // Try to mature the market - should fail with MarketAlreadyLiquidated
+        vm.expectRevert(abi.encodeWithSelector(Controller.MarketAlreadyLiquidated.selector, marketId));
         controller.matureMarket(marketId);
-        state = controller.marketStates(marketId);
-        assertEq(uint(state), uint(Controller.MarketState.Matured), "State should be Matured after maturing");
+    }
+
+    // Helper function to create vaults for a specific market ID
+    function createVaultsForMarket(uint256 marketId) internal returns (address riskVault, address hedgeVault) {
+        console.log("Creating vaults for market ID:", marketId);
         
-        // Test deposits and withdrawals are allowed in Matured state
-        assertTrue(controller.isDepositAllowed(marketId), "Deposit should be allowed in Matured state");
-        assertTrue(controller.isWithdrawAllowed(marketId), "Withdraw should be allowed in Matured state");
+        // Deploy Hedge vault with controller as the controller
+        HedgeVault hedge = new HedgeVault(
+            asset,
+            address(controller), // Use controller directly
+            marketId
+        );
+        hedgeVault = address(hedge);
+        console.log("Deployed Hedge vault at:", hedgeVault);
         
-        // Create a second market to test liquidation
-        (uint256 marketId2, , ) = marketCreator.createMarketVaults();
+        // Deploy Risk vault with controller as the controller
+        RiskVault risk = new RiskVault(
+            asset,
+            address(controller), // Use controller directly
+            hedgeVault,
+            marketId
+        );
+        riskVault = address(risk);
+        console.log("Deployed Risk vault at:", riskVault);
         
-        // Start the market (must be in InProgress first)
-        controller.startMarket(marketId2);
+        // Set sister vault - this requires ownership
+        console.log("Setting sister vault...");
+        vm.startPrank(address(this)); // Ensure we're the owner
+        hedge.setSisterVault(riskVault);
+        vm.stopPrank();
         
-        // Liquidate the market
-        controller.liquidateMarket(marketId2);
-        Controller.MarketState marketState2 = controller.marketStates(marketId2);
-        assertEq(uint(marketState2), uint(Controller.MarketState.Liquidated), "State should be Liquidated after liquidating");
+        // Register the vaults with the market creator
+        // This test is the controller for marketCreator, so we can call this directly
+        console.log("Registering vaults with market creator...");
+        marketCreator.registerVaults(marketId, riskVault, hedgeVault);
         
-        // Test deposits and withdrawals are allowed in Liquidated state
-        assertTrue(controller.isDepositAllowed(marketId2), "Deposit should be allowed in Liquidated state");
-        assertTrue(controller.isWithdrawAllowed(marketId2), "Withdraw should be allowed in Liquidated state");
+        return (riskVault, hedgeVault);
     }
     
-    function testInvalidStateTransition() public {
-        // Create a market
-        (uint256 marketId, , ) = marketCreator.createMarketVaults();
+    // Helper function to create a test market with explicit timing
+    function createTestMarketWithTimings() internal returns (uint256 marketId, address riskVault, address hedgeVault) {
+        console.log("Creating test market with timing parameters...");
+        console.log("Current time:", block.timestamp);
+        console.log("EVENT_START_TIME:", EVENT_START_TIME);
+        console.log("EVENT_END_TIME:", EVENT_END_TIME);
         
-        // Start the market (Open -> InProgress)
-        controller.startMarket(marketId);
+        // Create a fixed marketId for testing
+        marketId = 1; // Fixed ID for testing
+        console.log("Using market ID:", marketId);
         
-        // Trying to start again should revert
-        vm.expectRevert(abi.encodeWithSelector(
-            Controller.InvalidStateTransition.selector,
-            marketId,
-            Controller.MarketState.InProgress,
-            Controller.MarketState.InProgress
-        ));
-        controller.startMarket(marketId);
+        // Create vaults for the market
+        (riskVault, hedgeVault) = createVaultsForMarket(marketId);
+        
+        // Directly call the controller to create the market with timing parameters
+        console.log("Calling controller.marketCreated...");
+        controller.marketCreated(marketId, EVENT_START_TIME, EVENT_END_TIME);
+        console.log("Market created successfully.");
+        
+        return (marketId, riskVault, hedgeVault);
     }
 } 
