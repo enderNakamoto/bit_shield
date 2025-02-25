@@ -15,6 +15,8 @@ contract MockController {
     struct MarketTiming {
         uint256 eventStartTime;
         uint256 eventEndTime;
+        uint256 triggerPrice;
+        bool hasLiquidated;
     }
     
     mapping(uint256 => MarketTiming) public marketTimings;
@@ -24,19 +26,43 @@ contract MockController {
     }
     
     // This function will be called by MarketCreator when a market is created (with timing parameters)
-    function marketCreated(uint256 marketId, uint256 eventStartTime, uint256 eventEndTime) external {
+    function marketCreated(uint256 marketId, uint256 eventStartTime, uint256 eventEndTime, uint256 triggerPrice) external {
         marketStates[marketId] = MarketState.Open;
-        marketTimings[marketId] = MarketTiming(eventStartTime, eventEndTime);
+        marketTimings[marketId] = MarketTiming(eventStartTime, eventEndTime, triggerPrice, false);
     }
     
     // Legacy function for backward compatibility with tests
-    function marketCreated(uint256 marketId) external {
+    function marketCreated(uint256 marketId, uint256 eventStartTime, uint256 eventEndTime) external {
         marketStates[marketId] = MarketState.Open;
-        // Default to some reasonable times
+        // Default to some reasonable times and a default trigger price
         marketTimings[marketId] = MarketTiming(
-            block.timestamp + 1 days,
-            block.timestamp + 2 days
+            eventStartTime, 
+            eventEndTime,
+            1000, // Default trigger price
+            false
         );
+    }
+    
+    // Process oracle data to potentially liquidate or mature markets
+    function processOracleData(uint256 marketId, uint256 currentPrice, uint256 timestamp) external {
+        MarketTiming storage timing = marketTimings[marketId];
+        
+        // If price is below trigger and market is in progress, liquidate it
+        if (currentPrice < timing.triggerPrice && 
+            marketStates[marketId] == MarketState.InProgress &&
+            block.timestamp >= timing.eventStartTime &&
+            block.timestamp <= timing.eventEndTime) {
+            
+            marketStates[marketId] = MarketState.Liquidated;
+            timing.hasLiquidated = true;
+        }
+        // If event has ended and market wasn't liquidated, mature it
+        else if (marketStates[marketId] == MarketState.InProgress && 
+                 block.timestamp > timing.eventEndTime &&
+                 !timing.hasLiquidated) {
+            
+            marketStates[marketId] = MarketState.Matured;
+        }
     }
     
     // These functions will always succeed in tests by default
@@ -51,10 +77,14 @@ contract MockController {
     // Mock the required functions from the real Controller
     function liquidateMarket(uint256 marketId) external {
         marketStates[marketId] = MarketState.Liquidated;
+        marketTimings[marketId].hasLiquidated = true;
     }
     
     function matureMarket(uint256 marketId) external {
-        marketStates[marketId] = MarketState.Matured;
+        // Only mature if not already liquidated
+        if (!marketTimings[marketId].hasLiquidated) {
+            marketStates[marketId] = MarketState.Matured;
+        }
     }
     
     function startMarket(uint256 marketId) external {
@@ -65,5 +95,10 @@ contract MockController {
     function getMarketTiming(uint256 marketId) external view returns (uint256 startTime, uint256 endTime) {
         MarketTiming memory timing = marketTimings[marketId];
         return (timing.eventStartTime, timing.eventEndTime);
+    }
+    
+    // Getter function for market trigger price
+    function getMarketTriggerPrice(uint256 marketId) external view returns (uint256) {
+        return marketTimings[marketId].triggerPrice;
     }
 } 

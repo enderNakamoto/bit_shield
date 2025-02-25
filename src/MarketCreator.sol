@@ -44,12 +44,13 @@ contract MarketCreator {
         nextMarketId = 1;
     }
     
-    // Function to create market vaults with timing parameters
-    function createMarketVaults(
+    // Internal implementation for creating market vaults
+    function _createMarketVaults(
         uint256 eventStartTime,
-        uint256 eventEndTime
+        uint256 eventEndTime,
+        uint256 triggerPrice
     ) 
-        external 
+        internal 
         returns (
             uint256 marketId,
             address riskVault,
@@ -59,6 +60,10 @@ contract MarketCreator {
         // Validate time parameters
         if (eventStartTime <= block.timestamp || eventEndTime <= eventStartTime) {
             revert InvalidTimeParameters();
+        }
+        
+        if (triggerPrice == 0) {
+            revert("Trigger price must be greater than zero");
         }
         
         marketId = nextMarketId++;
@@ -92,7 +97,7 @@ contract MarketCreator {
         });
         
         // Notify the controller about the new market with timing parameters
-        try Controller(controller).marketCreated(marketId, eventStartTime, eventEndTime) {
+        try Controller(controller).marketCreated(marketId, eventStartTime, eventEndTime, triggerPrice) {
             // Successfully notified the controller
         } catch {
             // The controller might not have the updated marketCreated function yet
@@ -105,7 +110,39 @@ contract MarketCreator {
         return (marketId, riskVault, hedgeVault);
     }
     
-    // Keep a backwards-compatible version for test compatibility or simpler use cases
+    // Function to create market vaults with timing parameters and trigger price
+    function createMarketVaults(
+        uint256 eventStartTime,
+        uint256 eventEndTime,
+        uint256 triggerPrice
+    ) 
+        external 
+        returns (
+            uint256 marketId,
+            address riskVault,
+            address hedgeVault
+        ) 
+    {
+        return _createMarketVaults(eventStartTime, eventEndTime, triggerPrice);
+    }
+    
+    // Function to create market vaults with timing parameters and default trigger price
+    function createMarketVaults(
+        uint256 eventStartTime,
+        uint256 eventEndTime
+    ) 
+        external 
+        returns (
+            uint256 marketId,
+            address riskVault,
+            address hedgeVault
+        ) 
+    {
+        // Use a default trigger price of 1000 (arbitrary value, same as in Controller)
+        return _createMarketVaults(eventStartTime, eventEndTime, 1000);
+    }
+    
+    // Function to create market vaults with default parameters
     function createMarketVaults() 
         external 
         returns (
@@ -117,50 +154,10 @@ contract MarketCreator {
         // Default to start time 1 day in the future and end time 2 days in the future
         uint256 defaultStartTime = block.timestamp + 1 days;
         uint256 defaultEndTime = defaultStartTime + 1 days;
+        // Use a default trigger price of 1000 (arbitrary value)
+        uint256 defaultTriggerPrice = 1000;
         
-        // Create market vaults with default timing parameters
-        marketId = nextMarketId++;
-        
-        // Deploy Hedge vault first
-        HedgeVault hedge = new HedgeVault(
-            asset,
-            controller,
-            marketId
-        );
-        
-        hedgeVault = address(hedge);
-        
-        // Deploy Risk vault with Hedge vault address
-        RiskVault risk = new RiskVault(
-            asset,
-            controller,
-            hedgeVault,
-            marketId
-        );
-        
-        riskVault = address(risk);
-        
-        // Set sister vault in Hedge vault
-        hedge.setSisterVault(riskVault);
-        
-        // Store vault addresses
-        marketVaults[marketId] = MarketVaults({
-            riskVault: riskVault,
-            hedgeVault: hedgeVault
-        });
-        
-        // Notify the controller about the new market with default timing parameters
-        try Controller(controller).marketCreated(marketId, defaultStartTime, defaultEndTime) {
-            // Successfully notified the controller
-        } catch {
-            // The controller might not have the updated marketCreated function yet
-            // or there might be an issue with the call, but we don't want to
-            // revert the market creation process
-        }
-        
-        emit MarketVaultsCreated(marketId, riskVault, hedgeVault, defaultStartTime, defaultEndTime);
-        
-        return (marketId, riskVault, hedgeVault);
+        return _createMarketVaults(defaultStartTime, defaultEndTime, defaultTriggerPrice);
     }
     
     function getVaults(uint256 marketId) 

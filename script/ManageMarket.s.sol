@@ -22,6 +22,7 @@ contract ManageMarketScript is Script {
         uint256 marketId = 0;
         uint256 eventStartTime = 0;
         uint256 eventEndTime = 0;
+        uint256 triggerPrice = 0;
         
         Action action;
         string memory actionStr = vm.envString("ACTION");
@@ -30,9 +31,11 @@ contract ManageMarketScript is Script {
             action = Action.CREATE;
             eventStartTime = vm.envUint("EVENT_START_TIME");
             eventEndTime = vm.envUint("EVENT_END_TIME");
+            triggerPrice = vm.envOr("TRIGGER_PRICE", uint256(1000)); // Default to 1000 if not provided
             
             require(eventStartTime > block.timestamp, "Event start time must be in the future");
             require(eventEndTime > eventStartTime, "Event end time must be after start time");
+            require(triggerPrice > 0, "Trigger price must be greater than zero");
         } else {
             marketId = vm.envUint("MARKET_ID");
             require(marketId > 0, "Market ID must be provided");
@@ -59,10 +62,12 @@ contract ManageMarketScript is Script {
             console.log("Creating a new market with:");
             console.log("- Event Start Time:", eventStartTime);
             console.log("- Event End Time:", eventEndTime);
+            console.log("- Trigger Price:", triggerPrice);
             
             (uint256 newMarketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults(
                 eventStartTime,
-                eventEndTime
+                eventEndTime,
+                triggerPrice
             );
             
             console.log("Market created successfully!");
@@ -79,6 +84,7 @@ contract ManageMarketScript is Script {
             (uint256 startTime, uint256 endTime) = controller.getMarketTiming(newMarketId);
             console.log("- Event Start Time:", startTime);
             console.log("- Event End Time:", endTime);
+            console.log("- Trigger Price:", controller.getMarketTriggerPrice(newMarketId));
         } else {
             // Manage an existing market
             require(controllerAddr != address(0), "Controller address is required");
@@ -93,6 +99,7 @@ contract ManageMarketScript is Script {
             (uint256 startTime, uint256 endTime) = controller.getMarketTiming(marketId);
             console.log("Event Start Time:", startTime);
             console.log("Event End Time:", endTime);
+            console.log("Trigger Price:", controller.getMarketTriggerPrice(marketId));
             console.log("Current Time:", block.timestamp);
             
             if (action == Action.START) {
@@ -103,7 +110,11 @@ contract ManageMarketScript is Script {
                 controller.matureMarket(marketId);
             } else if (action == Action.LIQUIDATE) {
                 console.log("Liquidating market...");
-                controller.liquidateMarket(marketId);
+                // Instead of calling liquidateMarket directly, use processOracleData with a price below the trigger
+                uint256 triggerPrice = controller.getMarketTriggerPrice(marketId);
+                uint256 forceLiquidationPrice = triggerPrice > 1 ? triggerPrice - 1 : 0;
+                console.log("Using price below trigger:", forceLiquidationPrice);
+                controller.processOracleData(marketId, forceLiquidationPrice, block.timestamp);
             }
             
             // Log the updated state after operation
