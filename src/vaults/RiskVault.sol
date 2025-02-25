@@ -8,7 +8,7 @@ import "../Controller.sol";
 contract RiskVault is ERC4626 {
     address public immutable controller;
     address public sisterVault;
-    uint256 public immutable betId;
+    uint256 public immutable marketId;
     
     modifier onlyController() {
         require(msg.sender == controller, "Only controller can call this function");
@@ -19,16 +19,16 @@ contract RiskVault is ERC4626 {
         IERC20 asset_,
         address controller_,
         address hedgeVault_,
-        uint256 betId_
+        uint256 marketId_
     ) ERC20(
-        string.concat("Risk Vault ", Strings.toString(betId_)),
-        string.concat("rVault", Strings.toString(betId_))
+        string.concat("Risk Vault ", Strings.toString(marketId_)),
+        string.concat("rVault", Strings.toString(marketId_))
     ) ERC4626(asset_) {
         require(controller_ != address(0), "Invalid controller address");
         require(hedgeVault_ != address(0), "Invalid hedge vault address");
         controller = controller_;
         sisterVault = hedgeVault_;
-        betId = betId_;
+        marketId = marketId_;
     }
     
     function transferAssets(address to, uint256 amount) external onlyController {
@@ -39,26 +39,26 @@ contract RiskVault is ERC4626 {
     // Override deposit functions to check if deposit is allowed
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
         // Check with controller if deposit is allowed
-        Controller(controller).checkDepositAllowed(betId);
+        Controller(controller).checkDepositAllowed(marketId);
         return super.deposit(assets, receiver);
     }
     
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         // Check with controller if deposit is allowed
-        Controller(controller).checkDepositAllowed(betId);
+        Controller(controller).checkDepositAllowed(marketId);
         return super.mint(shares, receiver);
     }
     
     // Override withdraw functions to check if withdraw is allowed
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address ownerAddress) public override returns (uint256) {
         // Check with controller if withdraw is allowed
-        Controller(controller).checkWithdrawAllowed(betId);
-        return super.withdraw(assets, receiver, owner);
+        Controller(controller).checkWithdrawAllowed(marketId);
+        return super.withdraw(assets, receiver, ownerAddress);
     }
     
-    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
+    function redeem(uint256 shares, address receiver, address ownerAddress) public override returns (uint256) {
         // Check with controller if withdraw is allowed
-        Controller(controller).checkWithdrawAllowed(betId);
-        return super.redeem(shares, receiver, owner);
+        Controller(controller).checkWithdrawAllowed(marketId);
+        return super.redeem(shares, receiver, ownerAddress);
     }
 }

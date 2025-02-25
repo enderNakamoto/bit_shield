@@ -4,15 +4,14 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 import "../src/MarketCreator.sol";
 import "../src/Controller.sol";
-import "../test/mocks/MockToken.sol"; // Only for testing
 
-contract DeployMainnetScript is Script {
+contract DeployCoreScript is Script {
     function run() virtual external {
-        // Get private key from environment
+        // Get deployment parameters
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address assetToken = vm.envAddress("ASSET_TOKEN_ADDRESS");
         
-        require(assetToken != address(0), "Asset token address must be provided for mainnet");
+        require(assetToken != address(0), "Asset token address must be provided");
         
         // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
@@ -22,9 +21,9 @@ contract DeployMainnetScript is Script {
         address controllerAddress = address(controller);
         console.log("Deployed Controller at:", controllerAddress);
         
-        // Deploy MarketCreator with controller address
+        // Deploy MarketCreator
         MarketCreator marketCreator = new MarketCreator(
-            controllerAddress, 
+            controllerAddress,
             assetToken
         );
         address marketCreatorAddress = address(marketCreator);
@@ -36,8 +35,8 @@ contract DeployMainnetScript is Script {
         
         vm.stopBroadcast();
         
-        // Output deployment information for verification
-        console.log("Mainnet Deployment completed!");
+        // Output deployment information
+        console.log("Core Deployment completed!");
         console.log("Asset Token:", assetToken);
         console.log("Controller:", controllerAddress);
         console.log("MarketCreator:", marketCreatorAddress);

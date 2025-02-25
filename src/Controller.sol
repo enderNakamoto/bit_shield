@@ -7,7 +7,8 @@ import "./vaults/RiskVault.sol";
 import "./vaults/HedgeVault.sol";
 
 contract Controller {
-    MarketCreator public immutable marketCreator;
+    address public owner;
+    MarketCreator public marketCreator;
     
     // Market states enum
     enum MarketState {
@@ -35,6 +36,7 @@ contract Controller {
     event MarketLiquidated(uint256 indexed marketId);
     event MarketMatured(uint256 indexed marketId);
     event MarketCreated(uint256 indexed marketId, uint256 eventStartTime, uint256 eventEndTime, uint256 triggerPrice);
+    event MarketCreatorSet(address indexed marketCreator);
     
     error DepositNotAllowed(uint256 marketId, MarketState state);
     error WithdrawNotAllowed(uint256 marketId, MarketState state);
@@ -47,6 +49,9 @@ contract Controller {
     error InvalidOracleData(uint256 marketId);
     error InvalidTriggerPrice();
     error OnlyCallableFromOracle();
+    error MarketCreatorNotSet();
+    error OnlyOwner();
+    error MarketCreatorAlreadySet();
     
     modifier notLiquidated(uint256 marketId) {
         if (marketStates[marketId] == MarketState.Liquidated || marketDetails[marketId].hasLiquidated) {
@@ -55,13 +60,36 @@ contract Controller {
         _;
     }
     
-    constructor(address marketCreator_) {
-        require(marketCreator_ != address(0), "Invalid market creator address");
-        marketCreator = MarketCreator(marketCreator_);
+    modifier onlyOwner() {
+        if (msg.sender != owner) {
+            revert OnlyOwner();
+        }
+        _;
+    }
+    
+    modifier marketCreatorMustBeSet() {
+        if (address(marketCreator) == address(0)) {
+            revert MarketCreatorNotSet();
+        }
+        _;
+    }
+    
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    // Function to set the MarketCreator address, can only be called once by the owner
+    function setMarketCreator(address marketCreatorAddress) external onlyOwner {
+        if (address(marketCreator) != address(0)) {
+            revert MarketCreatorAlreadySet();
+        }
+        require(marketCreatorAddress != address(0), "Invalid market creator address");
+        marketCreator = MarketCreator(marketCreatorAddress);
+        emit MarketCreatorSet(marketCreatorAddress);
     }
     
     // Function to set a market to In Progress state
-    function startMarket(uint256 marketId) external {
+    function startMarket(uint256 marketId) external marketCreatorMustBeSet {
         MarketState currentState = marketStates[marketId];
         MarketDetails memory details = marketDetails[marketId];
         
@@ -85,7 +113,7 @@ contract Controller {
     }
     
     // Process oracle data and trigger liquidation if needed
-    function processOracleData(uint256 marketId, uint256 currentPrice, uint256 timestamp) external {
+    function processOracleData(uint256 marketId, uint256 currentPrice, uint256 timestamp) external marketCreatorMustBeSet {
         // Validate the data
         if (timestamp > block.timestamp) {
             revert InvalidOracleData(marketId);
@@ -177,7 +205,7 @@ contract Controller {
         }
     }
     
-    function matureMarket(uint256 marketId) public notLiquidated(marketId) {
+    function matureMarket(uint256 marketId) public notLiquidated(marketId) marketCreatorMustBeSet {
         (address riskVault, address hedgeVault) = marketCreator.getVaults(marketId);
         MarketState currentState = marketStates[marketId];
         MarketDetails memory details = marketDetails[marketId];
@@ -280,7 +308,7 @@ contract Controller {
         uint256 eventStartTime,
         uint256 eventEndTime,
         uint256 triggerPrice
-    ) external returns (uint256 marketId, address riskVault, address hedgeVault) {
+    ) external marketCreatorMustBeSet returns (uint256 marketId, address riskVault, address hedgeVault) {
         return marketCreator.createMarketVaults(eventStartTime, eventEndTime, triggerPrice);
     }
     
@@ -288,17 +316,17 @@ contract Controller {
     function createMarket(
         uint256 eventStartTime,
         uint256 eventEndTime
-    ) external returns (uint256 marketId, address riskVault, address hedgeVault) {
+    ) external marketCreatorMustBeSet returns (uint256 marketId, address riskVault, address hedgeVault) {
         return marketCreator.createMarketVaults(eventStartTime, eventEndTime);
     }
     
     // Create a market with all default parameters
-    function createMarket() external returns (uint256 marketId, address riskVault, address hedgeVault) {
+    function createMarket() external marketCreatorMustBeSet returns (uint256 marketId, address riskVault, address hedgeVault) {
         return marketCreator.createMarketVaults();
     }
     
     // Get vaults for a specific market
-    function getMarketVaults(uint256 marketId) external view returns (address riskVault, address hedgeVault) {
+    function getMarketVaults(uint256 marketId) external view marketCreatorMustBeSet returns (address riskVault, address hedgeVault) {
         return marketCreator.getVaults(marketId);
     }
 } 

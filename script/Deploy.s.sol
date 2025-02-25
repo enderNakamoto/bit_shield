@@ -24,33 +24,29 @@ contract DeployScript is Script {
             console.log("Using existing asset token at:", assetToken);
         }
         
-        // First deploy the interim controller
-        Controller interimController = new Controller(address(0)); // Temporary value
-        address interimControllerAddress = address(interimController);
+        // Deploy the Controller (no parameters needed now)
+        Controller controller = new Controller();
+        address controllerAddress = address(controller);
+        console.log("Deployed Controller at:", controllerAddress);
         
-        // Then deploy MarketCreator with interim controller
+        // Then deploy MarketCreator with controller address
         MarketCreator marketCreator = new MarketCreator(
-            interimControllerAddress, 
+            controllerAddress, 
             assetToken
         );
         address marketCreatorAddress = address(marketCreator);
         console.log("Deployed MarketCreator at:", marketCreatorAddress);
         
-        // Finally deploy the real Controller with MarketCreator address
-        Controller controller = new Controller(marketCreatorAddress);
-        address controllerAddress = address(controller);
-        console.log("Deployed Controller at:", controllerAddress);
-        
-        // Important: Set up markets if needed, but this must be done through 
-        // a separate process after updating the controller address in MarketCreator
+        // Set the MarketCreator in the Controller
+        controller.setMarketCreator(marketCreatorAddress);
+        console.log("Set MarketCreator in Controller");
         
         vm.stopBroadcast();
         
         // Output deployment information for verification
         console.log("Deployment completed!");
         console.log("Asset Token:", assetToken);
-        console.log("MarketCreator:", marketCreatorAddress);
         console.log("Controller:", controllerAddress);
-        console.log("IMPORTANT: You need to manually update the controller address in the MarketCreator contract.");
+        console.log("MarketCreator:", marketCreatorAddress);
     }
 } 

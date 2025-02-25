@@ -16,13 +16,24 @@ contract MarketCreatorTest is Test {
     MockController public controller;
     address public user1;
 
+    // Constants for test timestamps
+    uint256 public constant START_TIME = 1000000; // Base timestamp
+    uint256 public constant EVENT_START_TIME = 2000000; // Future timestamp for event start
+    uint256 public constant EVENT_END_TIME = 3000000; // Future timestamp for event end
+
+    // Define event with all parameters
     event MarketVaultsCreated(
         uint256 indexed marketId,
         address indexed riskVault,
-        address indexed hedgeVault
+        address indexed hedgeVault,
+        uint256 eventStartTime,
+        uint256 eventEndTime
     );
 
     function setUp() public {
+        // Set block timestamp to START_TIME for consistent testing
+        vm.warp(START_TIME);
+        
         user1 = address(2);
         asset = new MockToken();
         
@@ -47,31 +58,80 @@ contract MarketCreatorTest is Test {
         new MarketCreator(address(controller), address(0));
     }
 
-    function testCreateMarketVaults() public {        
-        (uint256 marketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults();
+    function testCreateMarketVaultsWithTriggerPrice() public {
+        // Don't test events, just function behavior
+        (uint256 marketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults(
+            EVENT_START_TIME,
+            EVENT_END_TIME,
+            1000 // Trigger price
+        );
         
+        // Verify the function results
         assertEq(marketId, 1, "First market ID should be 1");
-        assertTrue(riskVault != address(0), "Risk vault not deployed");
-        assertTrue(hedgeVault != address(0), "Hedge vault not deployed");
+        assertNotEq(riskVault, address(0), "Risk vault should be created");
+        assertNotEq(hedgeVault, address(0), "Hedge vault should be created");
         
-        // Verify stored vaults
-        (address storedRisk, address storedHedge) = marketCreator.getVaults(marketId);
-        assertEq(storedRisk, riskVault, "Stored risk vault mismatch");
-        assertEq(storedHedge, hedgeVault, "Stored hedge vault mismatch");
+        // Verify stored values
+        (address storedRiskVault, address storedHedgeVault) = marketCreator.getVaults(marketId);
+        assertEq(storedRiskVault, riskVault, "Risk vault address mismatch");
+        assertEq(storedHedgeVault, hedgeVault, "Hedge vault address mismatch");
+    }
+
+    function testCreateMarketVaults() public {
+        // Don't test events, just function behavior
+        (uint256 marketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults(
+            EVENT_START_TIME,
+            EVENT_END_TIME
+        );
+        
+        // Verify the function results
+        assertEq(marketId, 1, "First market ID should be 1");
+        assertNotEq(riskVault, address(0), "Risk vault should be created");
+        assertNotEq(hedgeVault, address(0), "Hedge vault should be created");
+        
+        // Verify stored values
+        (address storedRiskVault, address storedHedgeVault) = marketCreator.getVaults(marketId);
+        assertEq(storedRiskVault, riskVault, "Risk vault address mismatch");
+        assertEq(storedHedgeVault, hedgeVault, "Hedge vault address mismatch");
     }
 
     function testMultipleMarketCreation() public {
-        (uint256 firstId, , ) = marketCreator.createMarketVaults();
-        (uint256 secondId, , ) = marketCreator.createMarketVaults();
-        (uint256 thirdId, , ) = marketCreator.createMarketVaults();
+        // Create first market
+        (uint256 marketId1, , ) = marketCreator.createMarketVaults(EVENT_START_TIME, EVENT_END_TIME);
         
-        assertEq(firstId, 1, "First ID should be 1");
-        assertEq(secondId, 2, "Second ID should be 2");
-        assertEq(thirdId, 3, "Third ID should be 3");
+        // Create second market
+        (uint256 marketId2, , ) = marketCreator.createMarketVaults(EVENT_START_TIME, EVENT_END_TIME);
+        
+        assertEq(marketId1, 1, "First market ID should be 1");
+        assertEq(marketId2, 2, "Second market ID should be 2");
+        
+        // Verify we can get vaults for both markets
+        (address riskVault1, address hedgeVault1) = marketCreator.getVaults(marketId1);
+        (address riskVault2, address hedgeVault2) = marketCreator.getVaults(marketId2);
+        
+        assertNotEq(riskVault1, address(0), "Risk vault 1 should be created");
+        assertNotEq(hedgeVault1, address(0), "Hedge vault 1 should be created");
+        assertNotEq(riskVault2, address(0), "Risk vault 2 should be created");
+        assertNotEq(hedgeVault2, address(0), "Hedge vault 2 should be created");
+        
+        // Ensure different vaults were created
+        assertTrue(riskVault1 != riskVault2, "Risk vaults should be different");
+        assertTrue(hedgeVault1 != hedgeVault2, "Hedge vaults should be different");
     }
 
-    function testGetNonExistentVaults() public {
+    function testCreateMarketVaultsWithInvalidTimes() public {
+        // Test start time in the past
+        vm.expectRevert(abi.encodeWithSelector(MarketCreator.InvalidTimeParameters.selector));
+        marketCreator.createMarketVaults(START_TIME - 1, EVENT_END_TIME);
+        
+        // Test end time before start time
+        uint256 futureTime = block.timestamp + 1000;
+        vm.expectRevert(abi.encodeWithSelector(MarketCreator.InvalidTimeParameters.selector));
+        marketCreator.createMarketVaults(futureTime, futureTime - 1);
+    }
+
+    function testGetVaultsNonExistentMarket() public {
         vm.expectRevert(abi.encodeWithSelector(MarketCreator.VaultsNotFound.selector));
-        marketCreator.getVaults(999);
+        marketCreator.getVaults(999); // Non-existent market ID
     }
 }
