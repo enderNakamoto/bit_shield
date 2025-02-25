@@ -10,7 +10,7 @@ In just a 20-hour sprint, a solo dev and his Claude 3.7 sidekick made decent pro
 
 We set out to fetch Turkish Lira data and offer people a way to hedge against their inflationary fiat using Bitcoin—a worthy goal. Stacking sats > holding fiat.
 
-## How did we do it? - Risk/Protocol
+## How did we do it? - Risk/Hedge Protocol
 
 We built a protocol on top of ERC4626 primitive
 
