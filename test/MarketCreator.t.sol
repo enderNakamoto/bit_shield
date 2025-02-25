@@ -20,6 +20,7 @@ contract MarketCreatorTest is Test {
     uint256 public constant START_TIME = 1000000; // Base timestamp
     uint256 public constant EVENT_START_TIME = 2000000; // Future timestamp for event start
     uint256 public constant EVENT_END_TIME = 3000000; // Future timestamp for event end
+    uint256 public constant DEFAULT_TRIGGER_PRICE = 20; // Default trigger price
 
     // Define event with all parameters
     event MarketVaultsCreated(
@@ -81,7 +82,8 @@ contract MarketCreatorTest is Test {
         // Don't test events, just function behavior
         (uint256 marketId, address riskVault, address hedgeVault) = marketCreator.createMarketVaults(
             EVENT_START_TIME,
-            EVENT_END_TIME
+            EVENT_END_TIME,
+            DEFAULT_TRIGGER_PRICE
         );
         
         // Verify the function results
@@ -97,10 +99,18 @@ contract MarketCreatorTest is Test {
 
     function testMultipleMarketCreation() public {
         // Create first market
-        (uint256 marketId1, , ) = marketCreator.createMarketVaults(EVENT_START_TIME, EVENT_END_TIME);
+        (uint256 marketId1, , ) = marketCreator.createMarketVaults(
+            EVENT_START_TIME, 
+            EVENT_END_TIME, 
+            DEFAULT_TRIGGER_PRICE
+        );
         
         // Create second market
-        (uint256 marketId2, , ) = marketCreator.createMarketVaults(EVENT_START_TIME, EVENT_END_TIME);
+        (uint256 marketId2, , ) = marketCreator.createMarketVaults(
+            EVENT_START_TIME, 
+            EVENT_END_TIME, 
+            DEFAULT_TRIGGER_PRICE
+        );
         
         assertEq(marketId1, 1, "First market ID should be 1");
         assertEq(marketId2, 2, "Second market ID should be 2");
@@ -122,12 +132,12 @@ contract MarketCreatorTest is Test {
     function testCreateMarketVaultsWithInvalidTimes() public {
         // Test start time in the past
         vm.expectRevert(abi.encodeWithSelector(MarketCreator.InvalidTimeParameters.selector));
-        marketCreator.createMarketVaults(START_TIME - 1, EVENT_END_TIME);
+        marketCreator.createMarketVaults(START_TIME - 1, EVENT_END_TIME, DEFAULT_TRIGGER_PRICE);
         
         // Test end time before start time
         uint256 futureTime = block.timestamp + 1000;
         vm.expectRevert(abi.encodeWithSelector(MarketCreator.InvalidTimeParameters.selector));
-        marketCreator.createMarketVaults(futureTime, futureTime - 1);
+        marketCreator.createMarketVaults(futureTime, futureTime - 1, DEFAULT_TRIGGER_PRICE);
     }
 
     function testGetVaultsNonExistentMarket() public {

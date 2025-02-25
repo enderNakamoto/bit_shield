@@ -44,13 +44,13 @@ contract MarketCreator {
         nextMarketId = 1;
     }
     
-    // Internal implementation for creating market vaults
-    function _createMarketVaults(
+    // Function to create market vaults with timing parameters and trigger price
+    function createMarketVaults(
         uint256 eventStartTime,
         uint256 eventEndTime,
         uint256 triggerPrice
     ) 
-        internal 
+        external 
         returns (
             uint256 marketId,
             address riskVault,
@@ -108,56 +108,6 @@ contract MarketCreator {
         emit MarketVaultsCreated(marketId, riskVault, hedgeVault, eventStartTime, eventEndTime);
         
         return (marketId, riskVault, hedgeVault);
-    }
-    
-    // Function to create market vaults with timing parameters and trigger price
-    function createMarketVaults(
-        uint256 eventStartTime,
-        uint256 eventEndTime,
-        uint256 triggerPrice
-    ) 
-        external 
-        returns (
-            uint256 marketId,
-            address riskVault,
-            address hedgeVault
-        ) 
-    {
-        return _createMarketVaults(eventStartTime, eventEndTime, triggerPrice);
-    }
-    
-    // Function to create market vaults with timing parameters and default trigger price
-    function createMarketVaults(
-        uint256 eventStartTime,
-        uint256 eventEndTime
-    ) 
-        external 
-        returns (
-            uint256 marketId,
-            address riskVault,
-            address hedgeVault
-        ) 
-    {
-        // Use a default trigger price of 1000 (arbitrary value, same as in Controller)
-        return _createMarketVaults(eventStartTime, eventEndTime, 1000);
-    }
-    
-    // Function to create market vaults with default parameters
-    function createMarketVaults() 
-        external 
-        returns (
-            uint256 marketId,
-            address riskVault,
-            address hedgeVault
-        ) 
-    {
-        // Default to start time 1 day in the future and end time 2 days in the future
-        uint256 defaultStartTime = block.timestamp + 1 days;
-        uint256 defaultEndTime = defaultStartTime + 1 days;
-        // Use a default trigger price of 1000 (arbitrary value)
-        uint256 defaultTriggerPrice = 1000;
-        
-        return _createMarketVaults(defaultStartTime, defaultEndTime, defaultTriggerPrice);
     }
     
     function getVaults(uint256 marketId) 

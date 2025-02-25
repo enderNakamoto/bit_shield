@@ -312,19 +312,6 @@ contract Controller {
         return marketCreator.createMarketVaults(eventStartTime, eventEndTime, triggerPrice);
     }
     
-    // Create a market with custom timing parameters and default trigger price
-    function createMarket(
-        uint256 eventStartTime,
-        uint256 eventEndTime
-    ) external marketCreatorMustBeSet returns (uint256 marketId, address riskVault, address hedgeVault) {
-        return marketCreator.createMarketVaults(eventStartTime, eventEndTime);
-    }
-    
-    // Create a market with all default parameters
-    function createMarket() external marketCreatorMustBeSet returns (uint256 marketId, address riskVault, address hedgeVault) {
-        return marketCreator.createMarketVaults();
-    }
-    
     // Get vaults for a specific market
     function getMarketVaults(uint256 marketId) external view marketCreatorMustBeSet returns (address riskVault, address hedgeVault) {
         return marketCreator.getVaults(marketId);

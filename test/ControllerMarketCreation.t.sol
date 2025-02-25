@@ -22,6 +22,7 @@ contract ControllerMarketCreationTest is Test {
     uint256 public constant START_TIME = 1000000; // Block time at test start
     uint256 public constant EVENT_START_TIME = 2000000; // Future event start time
     uint256 public constant EVENT_END_TIME = 3000000; // Future event end time
+    uint256 public constant DEFAULT_TRIGGER_PRICE = 20; // Default trigger price
 
     function setUp() public {
         // Set up test environment
@@ -52,8 +53,17 @@ contract ControllerMarketCreationTest is Test {
     function testCreateMarketDefault() public {
         console.log("Testing default market creation...");
         
-        // Call createMarket with no parameters
-        (uint256 marketId, address riskVault, address hedgeVault) = controller.createMarket();
+        // Calculate future timestamps (relative to current block time)
+        uint256 startTime = block.timestamp + 1 days;
+        uint256 endTime = startTime + 1 days;
+        uint256 triggerPrice = DEFAULT_TRIGGER_PRICE;
+        
+        // Call createMarket with the required parameters
+        (uint256 marketId, address riskVault, address hedgeVault) = controller.createMarket(
+            startTime,
+            endTime,
+            triggerPrice
+        );
         
         // Verify results
         console.log("Created market with ID:", marketId);
@@ -76,14 +86,17 @@ contract ControllerMarketCreationTest is Test {
         // Calculate future timestamps (relative to current block time)
         uint256 startTime = block.timestamp + 1 days;
         uint256 endTime = startTime + 1 days;
+        uint256 triggerPrice = DEFAULT_TRIGGER_PRICE;
         
         console.log("Using start time:", startTime);
         console.log("Using end time:", endTime);
+        console.log("Using trigger price:", triggerPrice);
         
-        // Call createMarket with timing parameters
+        // Call createMarket with timing parameters and trigger price
         (uint256 marketId, address riskVault, address hedgeVault) = controller.createMarket(
             startTime,
-            endTime
+            endTime,
+            triggerPrice
         );
         
         // Verify results
@@ -127,8 +140,17 @@ contract ControllerMarketCreationTest is Test {
     }
     
     function testMarketCreationDepositWithdraw() public {
+        // Calculate future timestamps (relative to current block time)
+        uint256 startTime = block.timestamp + 1 days;
+        uint256 endTime = startTime + 1 days;
+        uint256 triggerPrice = DEFAULT_TRIGGER_PRICE;
+        
         // Create a market
-        (uint256 marketId, address riskVault, address hedgeVault) = controller.createMarket();
+        (uint256 marketId, address riskVault, address hedgeVault) = controller.createMarket(
+            startTime,
+            endTime,
+            triggerPrice
+        );
         
         // Fund user with tokens
         address user = address(0x1234);
